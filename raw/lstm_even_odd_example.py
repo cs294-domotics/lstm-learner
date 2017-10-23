@@ -19,23 +19,24 @@ model.compile(loss='categorical_crossentropy',
 
 # Generate training data
 # dimensions are batch_size, timesteps, data_sim
-x_train = np.array([[[0, 0, 0, 1]],
-                   [[0, 0, 1, 0]],
-                   [[1, 0, 0, 0]],
-                   [[1, 0, 1, 0]],
-                   [[0, 1, 0, 0]],
-                   [[0, 1, 0, 1]],
-                   [[1, 1, 0, 1]],
-                   [[0, 0, 1, 1]]])
-# two classes: [0,1] => "odd", [1,0] => "even"
-y_train = np.array([[[0, 1]],
-                    [[1, 0]],
-                    [[1, 0]],
-                    [[1, 0]],
-                    [[1, 0]],
-                    [[0, 1]],
-                    [[0, 1]],
-                    [[0, 1]]])
+x_train = np.array([[[0, 0, 0, 1]], # 1
+                   [[0, 0, 1, 0]],  # 2
+                   [[1, 0, 0, 0]],  # 8
+                   [[1, 0, 1, 0]],  # 10
+                   [[0, 1, 0, 0]],  # 4
+                   [[0, 1, 0, 1]],  # 5
+                   [[1, 1, 0, 1]],  # 13
+                   [[0, 0, 1, 1]]]) # 3
+# two classes:
+# [0,1] => "odd", [1,0] => "even"
+y_train = np.array([[[0, 1]],       # odd
+                    [[1, 0]],       # even
+                    [[1, 0]],       # even
+                    [[1, 0]],       # even
+                    [[1, 0]],       # even
+                    [[0, 1]],       # odd
+                    [[0, 1]],       # odd
+                    [[0, 1]]])      # odd
 
 # Generate validation data
 # dimensions are batch_size, timesteps, data_sim
