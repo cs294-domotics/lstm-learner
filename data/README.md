@@ -1,0 +1,1 @@
+- simple: one week of data taken from the twor.2010 dataset (CASAS 11)
