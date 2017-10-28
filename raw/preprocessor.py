@@ -9,7 +9,7 @@ def main():
 		data = f.read().splitlines()
     num_events = len(data)
     # get list of all devices in dataset sorted into buckets by type
-    device_buckets = get_devices(data)
+    device_buckets, first_timestamps = get_devices(data)
     # split into input and output devices
     input_device_buckets, label_device_buckets = filter_devices(device_buckets)
     # initialize input and label vectors
@@ -22,6 +22,7 @@ def main():
         if is_well_formed(line):
             device = get_device(line)
             value = get_value(line)
+            timestamp = get_timestamp(line) ############# AHHHHHHHHHH
             device_type = get_device_type(device)
             if device_type in desired_input_types or device_type in desired_label_types:
                 if device_type in desired_input_types:
@@ -32,22 +33,54 @@ def main():
                 label_vectors.append(label_vector)
                 print(input_vector),
                 print(label_vector)
+    # Now we need to trim off the start of the dataset.
+    # We need to have seen the state of all the desired device states
+    # before we start training the learner to predict those states.
+    # So we should find the timestep where we have seen all the desired label
+    # devices report their state at least once, and remove everything before
+
+    # get first occurrences of label devices
+    first_label_timestamps = filter_timestamps_by_device_type(first_timestamps)
+    # find the last first occurrence
+    all_labels_seen_timestamp = get_last_timestamp(first_label_timestamps)
+    # remove the stuff before the last first occurrence
+    # input_vectors, label_vectors = trim(input_vectors, label_vectors, all_labels_seen_timestamp)
+
+    # write to file
+    #feature_matrix = np.zeros((num_samples, num_features))
+	#label_vector = np.zeros(num_samples)
+    #feature_matrix.dump(open("features.npy", "wb"))
+	#label_vector.dump(open("labels.npy", "wb"))
+
+def filter_timestamps_by_device_type(timestamp_buckets):
+    timestamps = []
+    for device in timestamp_buckets:
+        if get_device_type(device) in desired_label_types:
+            timestamps.append(timestamp_buckets[device])
+    return timestamps
+
+def get_last_timestamp(timestamps):
+    timestamps.sort()
+    return timestamps[-1]
 
 # returns list of devices sorted into buckets by type
 # eg, {'M': ['M001', 'M002'],
 #      'D': ['D001']}
 def get_devices(data):
-    device_buckets = {}
-    for line in data:
+    device_type_buckets = {}
+    device_first_occurrences = {}
+    for line in lines:
         if is_well_formed(line):
             device = get_device(line)
             device_type = get_device_type(device)
-            if device_type not in device_buckets:
-                device_buckets[device_type] = [device]
+            if device_type not in device_type_buckets:
+                device_type_buckets[device_type] = [device]
+                device_first_occurrences[device] = get_timestamp(line)
             else:
-                if device not in device_buckets[device_type]:
-                    device_buckets[device_type].append(device)
-    return device_buckets
+                if device not in device_type_buckets[device_type]:
+                    device_type_buckets[device_type].append(device)
+                    device_first_occurrences[device] = get_timestamp(line)
+    return device_type_buckets, device_first_occurrences
 
 def filter_devices(device_buckets):
     input_device_buckets = {}
@@ -110,5 +143,12 @@ def initialize_vector(device_buckets):
     # return the default vector with the correct number of features
     # and the mapping from each device to its index in the feature vector
     return initial_vector, device_indices
+
+# first_label_timestamps = get_first_timestamps(label_device_buckets)
+def get_first_timestamps(label_device_buckets):
+
+def get_timestamp(line):
+    fields = line.split()
+    return fields[0] + ' ' + fields[1]
 
 main()
