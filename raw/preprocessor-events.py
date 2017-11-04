@@ -17,15 +17,15 @@ from time import time
 
 filename = "../data/twor2010"
 #filename = "../data/simple"
-desired_input_types = ['M', 'D'] #only motion and door sensors will be used in feature vector
-desired_label_types = ['L'] #predicting light states
+desired_input_types = ['M', 'D', 'L'] # events from motion, door, and light sensors will be used in feature vector
+desired_label_types = ['L'] #predicting the next light event
 features_save_filename = "features.npy"
 labels_save_filename = "labels.npy"
 
-encoding = {'OFF': 0,
-            'ON':  1,
-            'CLOSE': 0,
-            'OPEN': 1}
+desired_events = {'M': ['OFF', 'ON'],
+                  'D': ['CLOSE', 'OPEN'],
+                  'L': ['OFF', 'ON'], #not interested in events like DIM:183 from L007
+                  'A': ['START', 'END']}
 
 indent = "    "
 
@@ -36,11 +36,13 @@ def main():
     # build the input/label vectors and keep track of timestamps
     print("building vectors...")
     input_vectors, label_vectors, timestamps = build_vectors(data, input_device_buckets, label_device_buckets)
+    # align data
+    # HERE
     # use timestamps to remove vectors that occur before we've heard from all label devices at least once
     print("trimming vectors...")
     start_time = get_time_all_devices_seen(first_timestamps, desired_label_types)
     start_index = timestamps.index(start_time)
-    input_vectors = input_vectors[start_index:]
+    input_vectors = input_vectors[start_index-1:-1] #off-by-one to align the events with the following light action
     label_vectors = label_vectors[start_index:]
     # save trimmed vectors
     print("saving vectors...")
@@ -68,26 +70,29 @@ def build_vectors(data, input_device_buckets, label_device_buckets):
     input_vectors = []
     label_vectors = []
     timestamps = []
-    input_vector, input_device_indices = initialize_vector(input_device_buckets)
-    label_vector, label_device_indices = initialize_vector(label_device_buckets)
+    input_vector, input_event_indices = initialize_vector(input_device_buckets)
+    label_vector, label_event_indices = initialize_vector(label_device_buckets)
     # for each timestep, update either input vector or label vector or neither (if a device type we're ignoring)
     for line in data:
+        input_vector = zero_vector(len(input_vector))
+        label_vector = zero_vector(len(label_vector))
         if is_well_formed(line):
             device = get_device(line)
             value = get_value(line)
+            event = get_event(device, value)
             timestamp = get_timestamp(line) ############# AHHHHHHHHHH
             device_type = get_device_type(device)
             if device_type in desired_input_types or device_type in desired_label_types:
                 try:
                     if device_type in desired_input_types:
-                        input_vector[input_device_indices[device]] = encode(value)
-                    elif device_type in desired_label_types:
-                        label_vector[label_device_indices[device]] = encode(value)
+                        input_vector[input_event_indices[event]] = 1
+                    if device_type in desired_label_types:
+                        label_vector[label_event_indices[event]] = 1
                     input_vectors.append(copy(input_vector))
                     label_vectors.append(copy(label_vector))
                     timestamps.append(timestamp)
-                except ValueError:
-                    pass #if it's a weird value (aka not ON/OFF OPEN/CLOSE, or a number), skip
+                except KeyError:
+                    pass #if it's a weird value (aka not ON/OFF OPEN/CLOSE, etc.), skip
                 #print(input_vector),
                 #print(label_vector)
         samples_processed += 1
@@ -164,7 +169,7 @@ def filter_devices(device_buckets):
     for device_type in device_buckets:
         if device_type in desired_input_types:
             input_device_buckets[device_type] = device_buckets[device_type]
-        elif device_type in desired_label_types:
+        if device_type in desired_label_types:
             label_device_buckets[device_type] = device_buckets[device_type]
     return input_device_buckets, label_device_buckets
 
@@ -184,6 +189,9 @@ def get_value(line):
 def get_activity(line):
     return line.split()[4]
 
+def get_event(device, value):
+    return str(device) + '_' + str(value)
+
 def encode(value):
     try:
         encoded_value = encoding[value]
@@ -193,24 +201,34 @@ def encode(value):
 
 def initialize_vector(device_buckets):
     # figure out how many features the input vector will have
-    num_features = 0
-    device_indices = {}
-    index = 0
+    # devices and their possible event values according to type
+    # e.g., <m1_OFF, m1_ON, d1_CLOSED, d1_OPEN...>
+    # can't just record all the events we see, because we're not interested in
+    # all devices (don't care about P001) and we're not interest in all events
+    # (don't care about DIM:183 from L007, just ON/OFF).
+    feature_count = 0
+    event_indices = {}
     for device_type in device_buckets:
-        num_features += len(device_buckets[device_type])
-        # assign an index to each device
         for device in device_buckets[device_type]:
-            device_indices[device] = index
-            index += 1
+            for value in desired_events[device_type]:
+                event = get_event(device, value)
+                event_indices[event] = feature_count
+                feature_count += 1
 
     # create a default vector
-    initial_vector = []
-    for i in range(num_features):
-        initial_vector.append(0)
+    initial_vector = zero_vector(feature_count)
+
+    print(event_indices)
 
     # return the default vector with the correct number of features
     # and the mapping from each device to its index in the feature vector
-    return initial_vector, device_indices
+    return initial_vector, event_indices
+
+def zero_vector(length):
+    vector = []
+    for i in range(length):
+        vector.append(0)
+    return vector
 
 def get_timestamp(line):
     fields = line.split()
