@@ -11,7 +11,7 @@
 # unknown/incorrect labels.
 
 import numpy as np
-from copy import copy
+from copy import copy, deepcopy
 import datetime
 from time import time
 import random
@@ -37,24 +37,62 @@ def main():
     label_devices = flatten_buckets(label_device_buckets)
     # build the input/label vectors and keep track of timestamps
     print("building vector representation of data...")
-    input_vectors, label_vectors, label_device_events, label_event_indices = build_vectors(data, input_device_buckets, label_device_buckets)
+    input_vectors, label_vectors, label_device_events, label_event_indices, timestamps = build_vectors(data, input_device_buckets, label_device_buckets)
     # use timestamps to remove vectors that occur before we've heard from all label devices at least once
     print("aligning vector representation of data...")
+    timestamps = timestamps[:-1]
     input_vectors = input_vectors[:-1] #off-by-one to align the events with the following light action
     label_vectors = label_vectors[1:]
+    print("adding time of day information...")
+    # for the combined vectors, add in day/night info
+    input_vectors = add_time_of_day(input_vectors, timestamps)
     print("generating label vectors for each device...") # one-hot vectors <turned_off, turned_on, no_change>
     device_label_vectors = {}
     for device in label_devices:
-        device_label_vectors[device] = generate_device_label_vectors(label_device_events[device], label_event_indices, label_vectors)
-    print("sampling to generate balanced input for each class...")
-    window_size = 20 # need to find best window size
+        if device == 'L005':
+            device_label_vectors[device] = generate_device_label_vectors(label_device_events[device], label_event_indices, label_vectors)
+        else:
+            device_label_vectors[device] = label_vectors
+    print("adding state info to each device's feature vectors...")
+    # for each light's vectors, insert the state information into the feature vectors
+    device_feature_vectors = {}
     for device in label_devices:
-        input_samples, label_samples = select_samples(device, input_vectors, device_label_vectors[device], window_size)
-        print("saving samples for " + str(device) + "...")
-        feature_filename = "build/" + str(device) + "_" + features_save_filename
-        label_filename = "build/" + str(device) + "_" + labels_save_filename
-        save_vectors(input_samples, label_samples, feature_filename, label_filename)
-        print("saved samples to " + feature_filename + " and " + label_filename)
+        if device == 'L005':
+            device_feature_vectors[device] = generate_device_feature_vectors(input_vectors, device_label_vectors[device])
+        else:
+            device_feature_vectors[device] = input_vectors
+    print("sampling to generate balanced input for each class...")
+    window_size = 5 # need to find best window size
+    for device in label_devices:
+        if device == 'L005':
+            input_samples, label_samples = select_samples(device, device_feature_vectors[device], device_label_vectors[device], window_size)
+            print("saving samples for " + str(device) + "...")
+            feature_filename = "build/" + str(device) + "_" + features_save_filename
+            label_filename = "build/" + str(device) + "_" + labels_save_filename
+            save_vectors(input_samples, label_samples, feature_filename, label_filename)
+            print("saved samples to " + feature_filename + " and " + label_filename)
+
+def add_time_of_day(input_vectors, timestamps):
+    time_of_day = 0 #night
+    for (i, t) in enumerate(timestamps):
+        # get hour of day
+        date = datetime.datetime.fromtimestamp(t)
+        #print(date.hour)
+        if date.hour > 6 and date.hour < 18:
+            time_of_day = 1 #day
+        input_vectors[i] = input_vectors[i] + [date.hour/24.0]
+    return input_vectors
+
+def generate_device_feature_vectors(input_vectors, label_vectors):
+    light_state = 0
+    vectors = deepcopy(input_vectors)
+    for (i, states) in enumerate(label_vectors):
+        vectors[i] = vectors[i] + [light_state]
+        if states[0] == 1:
+            light_state = 0
+        elif states[1] == 1:
+            light_state = 1
+    return vectors
 
 def generate_device_label_vectors(device_events, event_indices, event_vectors):
     device_event_vectors = []
@@ -64,7 +102,7 @@ def generate_device_label_vectors(device_events, event_indices, event_vectors):
     for event_vector in event_vectors:
         # initialize new device event vector
         device_event_vector = []
-        for i in range(len(event_indices) + 1):
+        for i in range(len(device_event_indices) + 1):
             device_event_vector.append(0)
         # fill in the change events
         for (i, index) in enumerate(device_event_indices):
@@ -85,6 +123,16 @@ def flatten_buckets(buckets):
 def load_data(filename):
     with open(filename) as f:
         data = f.read().splitlines()
+
+    #print("removing all lines with devices in rooms outside of the living room...")
+    #nearby_devices = ["M001", "M002", "M003", "M004", "M005", "M006", "M007", "M008", "M009", "M010", "M011", "M012", "M013", "M014", "M015", "M016", "M023" "D002", "L004", "L003", "L005"]
+    #new_data = []
+    #for line in data:
+#        d = get_device(line)
+#        if d in nearby_devices:
+#            new_data.append(line)
+#    data = new_data
+
     # get list of all devices in dataset sorted into buckets by type
     device_buckets, first_timestamps = get_devices(data)
     # split into input and output devices
@@ -112,7 +160,7 @@ def build_vectors(data, input_device_buckets, label_device_buckets):
             device = get_device(line)
             value = get_value(line)
             event = get_event(device, value)
-            timestamp = get_timestamp(line) ############# AHHHHHHHHHH
+            timestamp = get_timestamp(line)
             device_type = get_device_type(device)
             if device_type in desired_input_types or device_type in desired_label_types:
                 try:
@@ -138,7 +186,7 @@ def build_vectors(data, input_device_buckets, label_device_buckets):
             start_chunk_time = time()
     total_minutes = round((time() - start_time)/60.0, 2)
     print(indent + "total elapsed time: " + str(total_minutes) + " minutes")
-    return input_vectors, label_vectors, label_device_events, label_event_indices #, timestamps
+    return input_vectors, label_vectors, label_device_events, label_event_indices, timestamps
 
 def get_time_all_devices_seen(first_timestamps, desired_types):
     # get first occurrences of label devices
@@ -174,12 +222,16 @@ def select_samples(device, input_vectors, device_label_vectors, window_size):
     print("     Number of ON samples: " + str(len(class_sample_indices[1])))
     # choose random indices for the no-change events
     num_samples = len(class_sample_indices[0])
-    no_change_indices = [class_indices[-1][i] for i in sorted(random.sample(range(window_size, len(class_indices[-1])), num_samples)) ]
+    no_change_indices = []
+    for i in sorted(random.sample(range(window_size, len(class_indices[-1])), num_samples)):
+        no_change_indices.append(class_indices[-1][i])
     class_sample_indices.append(no_change_indices)
+    print("     Number of NO CHANGE samples: " + str(len(class_sample_indices[2])))
 
     # slice out the window of events before each index and pair it with the event
     indices = [index for sample_indices in class_sample_indices for index in sample_indices]
     input_samples, label_samples = get_windows(indices, input_vectors, device_label_vectors, window_size)
+
     return input_samples, label_samples
 
 def get_windows(indices, input_vectors, label_vectors, window_size):
