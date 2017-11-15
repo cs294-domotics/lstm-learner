@@ -22,8 +22,6 @@ def main():
         if is_well_formed(line):
             device_type = get_device_type(get_device(line))
             timestamp = get_timestamp(line)
-            if curr_line < 5:
-                print(timestamp)
             if device_type == light_type:
                 if prev_device_timestamp != None:
                     diff = timestamp - prev_device_timestamp
