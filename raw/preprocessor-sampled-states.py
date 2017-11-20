@@ -16,10 +16,11 @@ import datetime
 from time import time
 
 filename = "../data/twor2010"
-#filename = "../data/simple"
+#filename = "../data/stupid_simple"
 desired_types = ['M', 'D', 'L']
 features_save_filename = "trajectory_features.npy"
 labels_save_filename = "trajectory_labels.npy"
+save_folder = "build/"
 
 encoding = {'OFF': 0,
             'ON':  1,
@@ -28,8 +29,19 @@ encoding = {'OFF': 0,
 
 indent = "    "
 
-WINDOW_TIME_SECS = 5 * 60 #previous five minutes
-SAMPLE_INTERVAL_SECS = 0.5
+ONE_DAY_SECS = 60*60*24
+ONE_WEEK_SECS = ONE_DAY_SECS * 7
+TWO_WEEK_SECS = ONE_WEEK_SECS * 2
+ONE_MONTH_SECS = ONE_DAY_SECS * 30
+
+WINDOW_TIME_SECS = 60 #5 * 60 #previous five minutes
+SAMPLE_INTERVAL_SECS = 5 #needs to divide evenly into WINDOW_TIME_SECS
+NUM_SAMPLES_PER_WINDOW = WINDOW_TIME_SECS / SAMPLE_INTERVAL_SECS
+TIMEFRAMES = [ONE_DAY_SECS, ONE_WEEK_SECS, TWO_WEEK_SECS, ONE_MONTH_SECS]
+TIMEFRAME_NAMES = {ONE_DAY_SECS: "one_day",
+                   ONE_WEEK_SECS: "one_week",
+                   TWO_WEEK_SECS: "two_weeks",
+                   ONE_MONTH_SECS: "one_month"}
 
 def main():
     print("loading data...")
@@ -40,12 +52,25 @@ def main():
     start_time = get_time_all_devices_seen(first_timestamps, desired_types)
     start_index = timestamps.index(start_time)
     stateful_data = stateful_data[start_index:]
+    timestamps = timestamps[start_index:]
     print("sampling and building trajectory windows...")
-    trajectory_windows, next_in_windows = build_trajectories(timestamps, stateful_data)
-    print("saving vectors...")
-    save_vectors(trajectory_windows, features_save_filename)
-    save_vectors(next_in_windows, labels_save_filename)
-    print("saved vectors to " + features_save_filename + " and " + labels_save_filename)
+    for timeframe in TIMEFRAMES:
+        training_points, testing_points = sample_stateful_data(timestamps, stateful_data, timeframe)
+        training_trajectory_windows, training_next_in_windows = build_trajectories(timestamps, stateful_data, training_points)
+        testing_trajectory_windows, testing_next_in_windows = build_trajectories(timestamps, stateful_data, testing_points)
+        print("saving vectors for " + TIMEFRAME_NAMES[timeframe] + "...")
+        training_features_file = save_folder + "training_" + TIMEFRAME_NAMES[timeframe] + "_" + features_save_filename
+        training_labels_file = save_folder + "training_" + TIMEFRAME_NAMES[timeframe] + "_" + labels_save_filename
+        testing_features_file = save_folder + "testing_" + TIMEFRAME_NAMES[timeframe] + "_" + features_save_filename
+        testing_labels_file = save_folder + "testing_" + TIMEFRAME_NAMES[timeframe] + "_" + labels_save_filename
+        save_vectors(training_trajectory_windows, training_features_file)
+        save_vectors(training_next_in_windows, training_labels_file)
+        save_vectors(testing_trajectory_windows, testing_features_file)
+        save_vectors(testing_next_in_windows, testing_labels_file)
+        print("saved vectors to " + training_features_file + ", " +
+                                    training_labels_file + ", " +
+                                    testing_features_file + ", and " +
+                                    testing_labels_file)
 
 def load_data(filename):
     with open(filename) as f:
@@ -54,7 +79,7 @@ def load_data(filename):
     device_buckets, first_timestamps = get_devices(data)
     return data, device_buckets, first_timestamps
 
-def build_stateful_vectors(lines, device_buckets):
+def build_stateful_data(data, device_buckets):
     # progress report info
     update_chunk = 200000 #samples
     num_samples = len(data)
@@ -66,7 +91,8 @@ def build_stateful_vectors(lines, device_buckets):
     stateful_data = []
     timestamps = []
     state_vector, device_indices = initialize_vector(device_buckets)
-    for line in lines:
+    print(device_indices)
+    for line in data:
         if is_well_formed(line):
             device = get_device(line)
             value = get_value(line)
@@ -105,30 +131,71 @@ def get_time_all_devices_seen(first_timestamps, desired_types):
     all_devices_seen_timestamp = get_last_timestamp(first_device_timestamps)
     return all_devices_seen_timestamp
 
-def build_trajectories(timestamps, stateful_data):
+def sample_stateful_data(timestamps, stateful_data, timeframe):
+    # get the timeframe of stateful data we're interested in
+    # for both testing time and training timeframe:
+        # figure out candidate timestamps for transitions
+        # figure out candidate timestamps for stateful times
+        # figure out the num_samples (the min of the number of candidates)
+        # sample from the candidate transitions/stateful times to get an equal number of each
+        # combine points in order
+    return training_points, testing_points # timestamps of where points are in stateful_data
+
+
+def build_trajectories(timestamps, stateful_data, points_of_interest):
     trajectory_windows = []
     next_in_windows = []
-    # STEP 1: pick indices of goal states to learn
-    # OPTION 1: Good ones to target are situations where the light changes
-    # There should probably be roughly equal numbers of examples where some light changes
-    # And where no lights change
-    # OPTION 2: maybe sample a random percent of them, so that the thing doesn't explode on me?
-    # problem is that doesn't represent the deployment setup very well.
-    # Whatever, let's just see if it works for now.
 
-    # STEP 2:
-    # get the stateful data from the preceding WINDOW_TIME_SECS (and one before to initialize)
-    # then construct sample window with SAMPLE_INTERVAL_SECS number of state vectors
-    # which change according to the timestamp info (basically, filling in gaps)
-    for index in indices:
-        next_state = stateful_data[index]
-        next_state_timestamp = timestamps[index]
-        window_start_timestamp = next_state_timestamp - WINDOW_TIME_SECS
-        previous_states = ... #everything between timestamp of next_state-WINDOW_TIME_SECS
-        previous_states_timestamps = 
-        trajectory = []
-        for state in previous_states:
     return trajectory_windows, next_in_windows
+
+
+def build_trajectory(timestamps, stateful_data, timestamp):
+    # get the next state after the trajectory window
+    next_state = stateful_data[index]
+    next_state_timestamp = timestamps[index]
+    # get the starting index of the initial state for the trajectory
+    # initial state is the one before the window starts
+    window_start_timestamp = next_state_timestamp - WINDOW_TIME_SECS
+    #print(str(window_start_timestamp) + "\n")
+    i = index
+    while timestamps[i] >= window_start_timestamp:
+        i = i - 1
+        #print(timestamps[i])
+    # get the states in the window + one before (the initial state)
+    previous_states = stateful_data[i:index]
+    previous_states_timestamps = timestamps[i:index]
+    #print(previous_states)
+    #print(previous_states_timestamps)
+    # construct the trajectory as though the state were being polled at
+    # a regular interval during that window
+    initial_state = previous_states[0]
+    trajectory = []
+    poll_timestamps = generate_poll_timestamps(window_start_timestamp, next_state_timestamp)
+    #print(poll_timestamps)
+    #print(len(poll_timestamps))
+    for poll_timestamp in poll_timestamps:
+        # get the state vector that happened most recently at poll time
+        preceding_state_index = get_index_of_preceding_number(poll_timestamp, previous_states_timestamps)
+        #print(preceding_state_index)
+        trajectory.append(previous_states[preceding_state_index])
+    trajectory_windows.append(trajectory)
+    next_in_windows.append(next_state)
+
+    return trajectory_windows, next_in_windows
+
+def get_index_of_preceding_number(n, sorted_number_list):
+    i = len(sorted_number_list) - 1
+    while n < sorted_number_list[i]:
+        i = i - 1
+    return i
+
+def generate_poll_timestamps(window_start_timestamp, next_state_timestamp):
+    duration_secs = next_state_timestamp - window_start_timestamp
+    num_samples = int(duration_secs / SAMPLE_INTERVAL_SECS)
+    poll_timestamps = []
+    for i in range(num_samples):
+        poll_timestamps.append(window_start_timestamp + SAMPLE_INTERVAL_SECS * i)
+    return poll_timestamps
 
 def get_windows(indices, trajectory_windows, window_size):
     input_samples = []
