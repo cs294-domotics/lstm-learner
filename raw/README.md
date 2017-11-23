@@ -1,0 +1,6 @@
+### How to run:
+
+1. `events-to-states.py` takes in a CASAS data file and outputs a giant stateful version of the same dataset that looks like the state of all devices was polled at a user-specified interval. By default this file will be saved to the directory `stateful_data`.
+2. `slicer-dicer.py` takes in the file created by `events-to-states.py` and generates a whole bunch of files with subsets of the original file for different durations of time. Currently the durations are one day, one week, two weeks, and one month. For each duration the program creates raw files for training and testing, and any of the training ones can be used with any of the testing ones. These files are also saved to the `stateful_data` folder. See the comments in the file for more details.
+3. `windowmaker.py` takes in any stateful data file and spits out files containing numpy arrays for the LSTM representing windows of time that the LSTM will try to learn. These files will be written to the `build` folder.
+4. `lstm_trajectory.py` takes in the numpy array files created by `windowmaker.py` and tries to learn! Currently the accuracy metrics are fairly meaningless for our application, but you can see it learn in general.
