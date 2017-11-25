@@ -11,14 +11,14 @@
 
 import numpy as np
 
-LOAD_FOLDER = "stateful_data/non-overlapping/"
-#FILENAME = "twor2010_1s_one_week_train"
+LOAD_FOLDER = "stateful_data/"
+FILENAME = "twor2010_1s_one_week_train"
 #FILENAME = "twor2010_1s_one_week_test"
-FILENAME = "twor2010_1s_two_weeks_train"
+#FILENAME = "twor2010_1s_two_weeks_train"
 #FILENAME = "twor2010_1s_two_weeks_test"
 #FILENAME = "stupid_simple_1s_full"
 LOAD_FILENAME = LOAD_FOLDER + FILENAME
-SAVE_FOLDER = "build/"
+SAVE_FOLDER = "build/non-overlapping"
 SAVE_INPUT_FILENAME = SAVE_FOLDER + FILENAME + "_in.npy"
 SAVE_OUTPUT_FILENAME = SAVE_FOLDER + FILENAME + "_out.npy"
 
