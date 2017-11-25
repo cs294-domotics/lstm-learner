@@ -1,4 +1,4 @@
-# K-19: The Windowmaker
+#K-19: The Windowmaker
 # Takes in a fixed-interval stateful data file formatted like:
 #
 # Timestamp M050 M044 M045 L005
@@ -11,9 +11,11 @@
 
 import numpy as np
 
-LOAD_FOLDER = "stateful_data/"
+LOAD_FOLDER = "stateful_data/non-overlapping/"
 #FILENAME = "twor2010_1s_one_week_train"
-FILENAME = "twor2010_1s_one_week_test"
+#FILENAME = "twor2010_1s_one_week_test"
+FILENAME = "twor2010_1s_two_weeks_train"
+#FILENAME = "twor2010_1s_two_weeks_test"
 #FILENAME = "stupid_simple_1s_full"
 LOAD_FILENAME = LOAD_FOLDER + FILENAME
 SAVE_FOLDER = "build/"
