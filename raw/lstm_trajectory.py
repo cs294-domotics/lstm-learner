@@ -2,8 +2,8 @@ from keras.models import Sequential
 from keras.layers import LSTM, Dense
 from keras.optimizers import RMSprop
 
-import seq2seq
-from seq2seq.models import SimpleSeq2Seq
+#import seq2seq
+#from seq2seq.models import SimpleSeq2Seq
 
 import tensorflow as tf
 
