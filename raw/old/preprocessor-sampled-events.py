@@ -16,12 +16,29 @@ import datetime
 from time import time
 import random
 
-filename = "../data/twor2010"
+
+#filetime = "_one_day_train"
+#filetime = "_one_day_test"
+#filetime = "_one_week_train"
+#filetime = "_one_week_test"
+#filetime = "_two_weeks_train"
+#filetime = "_two_weeks_test"
+#filetime = "_one_month_train"
+filetime = "_one_month_test"
+filename = "event_data/twor2010" + filetime
+master_file = "../data/twor2010"
+
+#filename = "../data/twor2010"
 #filename = "../data/stupid_simple"
 desired_input_types = ['M', 'D', 'L'] # events from motion, door, and light sensors will be used in feature vector
 desired_label_types = ['L'] #predicting the next light event
 features_save_filename = "features.npy"
 labels_save_filename = "labels.npy"
+save_folder = "build/events/raw/light_and_time/"
+#save_folder = "build/events/raw/no_light_no_time/"
+
+add_time = True
+add_light_state = True
 
 desired_events = {'M': ['OFF', 'ON'],
                   'D': ['CLOSE', 'OPEN'],
@@ -30,10 +47,14 @@ desired_events = {'M': ['OFF', 'ON'],
 
 indent = "    "
 
+window_size = 40  # need to find best window size
+
+
 def main():
     # get data and metadata
     print("loading data...")
-    data, input_device_buckets, label_device_buckets, first_timestamps = load_data(filename)
+    _, input_device_buckets, label_device_buckets, first_timestamps = load_data(master_file)
+    data, _, _, _ = load_data(filename)
     label_devices = flatten_buckets(label_device_buckets)
     # build the input/label vectors and keep track of timestamps
     print("building vector representation of data...")
@@ -43,9 +64,10 @@ def main():
     timestamps = timestamps[:-1]
     input_vectors = input_vectors[:-1] #off-by-one to align the events with the following light action
     label_vectors = label_vectors[1:]
-    print("adding time of day information...")
-    # for the combined vectors, add in day/night info
-    input_vectors = add_time_of_day(input_vectors, timestamps)
+    if add_time:
+        print("adding time of day information...")
+        # for the combined vectors, add in day/night info
+        input_vectors = add_time_of_day(input_vectors, timestamps)
     print("generating label vectors for each device...") # one-hot vectors <turned_off, turned_on, no_change>
     device_label_vectors = {}
     for device in label_devices:
@@ -53,22 +75,25 @@ def main():
             device_label_vectors[device] = generate_device_label_vectors(label_device_events[device], label_event_indices, label_vectors)
         else:
             device_label_vectors[device] = label_vectors
-    print("adding state info to each device's feature vectors...")
+    if add_light_state:
+        print("adding state info to each device's feature vectors...")
     # for each light's vectors, insert the state information into the feature vectors
     device_feature_vectors = {}
     for device in label_devices:
         if device == 'L005':
-            device_feature_vectors[device] = generate_device_feature_vectors(input_vectors, device_label_vectors[device])
+            if add_light_state:
+                device_feature_vectors[device] = generate_device_feature_vectors(input_vectors, device_label_vectors[device])
+            else:
+                device_feature_vectors[device] = input_vectors
         else:
             device_feature_vectors[device] = input_vectors
     print("sampling to generate balanced input for each class...")
-    window_size = 5 # need to find best window size
     for device in label_devices:
         if device == 'L005':
             input_samples, label_samples = select_samples(device, device_feature_vectors[device], device_label_vectors[device], window_size)
             print("saving samples for " + str(device) + "...")
-            feature_filename = "build/" + str(device) + "_" + features_save_filename
-            label_filename = "build/" + str(device) + "_" + labels_save_filename
+            feature_filename = save_folder + str(device) + "_" + str(window_size) + filetime + "_" + features_save_filename
+            label_filename = save_folder + str(device) + "_" + str(window_size) + filetime + "_" + labels_save_filename
             save_vectors(input_samples, label_samples, feature_filename, label_filename)
             print("saved samples to " + feature_filename + " and " + label_filename)
 
@@ -78,20 +103,20 @@ def add_time_of_day(input_vectors, timestamps):
         # get hour of day
         date = datetime.datetime.fromtimestamp(t)
         #print(date.hour)
-        if date.hour > 6 and date.hour < 18:
-            time_of_day = 1 #day
-        input_vectors[i] = input_vectors[i] + [date.hour/24.0]
+        #if date.hour > 6 and date.hour < 18:
+        #    time_of_day = 1 #day
+        input_vectors[i] = [date.hour/24.0] + input_vectors[i]
     return input_vectors
 
 def generate_device_feature_vectors(input_vectors, label_vectors):
     light_state = 0
     vectors = deepcopy(input_vectors)
-    for (i, states) in enumerate(label_vectors):
-        vectors[i] = vectors[i] + [light_state]
-        if states[0] == 1:
-            light_state = 0
-        elif states[1] == 1:
-            light_state = 1
+#    for (i, states) in enumerate(label_vectors):
+#        vectors[i] = vectors[i] + [light_state]
+#        if states[0] == 1:
+#            light_state = 0
+#        elif states[1] == 1:
+#            light_state = 1
     return vectors
 
 def generate_device_label_vectors(device_events, event_indices, event_vectors):
