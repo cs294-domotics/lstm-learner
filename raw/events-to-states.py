@@ -9,8 +9,8 @@ import datetime
 from time import time
 
 LOAD_FOLDER = "../data/"
-DATA_FILE = "twor2010"
-#DATA_FILE = "stupid_simple"
+#DATA_FILE = "twor2010"
+DATA_FILE = "stupid_simple"
 FILENAME = LOAD_FOLDER + DATA_FILE
 DESIRED_TYPES = ['M', 'D', 'L']
 LIGHT_TYPE = 'L'
@@ -103,7 +103,13 @@ def get_time_all_devices_seen(first_timestamps, DESIRED_TYPES):
     return all_devices_seen_timestamp
 
 def generate_and_save_fixed_interval_data(event_timestamps, stateful_event_data, interval_secs, device_indices):
-    column_labels = "Timestamp " + " ".join(device_indices.keys()) + "\n"
+    num_state_cols = len(stateful_event_data[0])
+    state_col_labels = []
+    for i in range(num_state_cols):
+        state_col_labels.append(None)
+    for device in device_indices:
+        state_col_labels[device_indices[device]] = device
+    column_labels = "Timestamp " + " ".join(state_col_labels) + "\n"
     save_file = get_filename(DATA_FILE, INTERVAL_SECS, "full")
     f = open(save_file, "w")
     f.write(column_labels)
@@ -209,6 +215,11 @@ def initialize_vector(device_buckets):
     index = 0
     # guarantee that lights will be the last indices
     device_types = list(device_buckets.keys())
+    filtered_types = []
+    for device_type in device_types:
+        if device_type in DESIRED_TYPES:
+            filtered_types.append(device_type)
+    device_types = filtered_types
     device_types.pop(device_types.index(LIGHT_TYPE)) #remove 'L' from wherever
     device_types.append(LIGHT_TYPE) #put it back at the end
     for device_type in device_types:
