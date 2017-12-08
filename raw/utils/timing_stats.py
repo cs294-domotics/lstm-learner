@@ -1,4 +1,4 @@
-filename = "data/twor2010"
+filename = "../../data/twor2010"
 
 #stats I want:
 #mean, median, and std dev of gaps between event and light change event
@@ -14,9 +14,12 @@ desired_types = ['L', 'M', 'D']
 def main():
     with open(filename) as f:
         lines = f.read().splitlines()
+    days_with_transitions = {}
     event_counts_per_light = {}
     prev_device_timestamp = None
     prev_nonlight_timestamp = None
+    activity_durations = {}
+    activity_start_timestamps = {}
     all_event_diffs = []
     diffs = []
     nonlight_diffs = []
@@ -27,6 +30,7 @@ def main():
             device = get_device(line)
             device_type = get_device_type(device)
             timestamp = get_timestamp(line)
+            date = get_date(line)
             if device_type in desired_types:
                 if prev_device_timestamp != None:
                     all_event_diffs.append(timestamp - prev_device_timestamp)
@@ -41,9 +45,16 @@ def main():
                     if prev_nonlight_timestamp != None:
                         nonlight_diff = timestamp - prev_nonlight_timestamp
                         nonlight_diffs.append(nonlight_diff)
+                    if date not in days_with_transitions:
+                        days_with_transitions[date] = 1
+                    else:
+                        days_with_transitions[date] += 1
                 else:
                     prev_nonlight_timestamp = timestamp
                 prev_device_timestamp = timestamp
+            # if has activity:
+            #   if activity == start: set timestamp
+            #   if activity == end: calculate duration and add to duration list, reset start to None
             curr_line += 1
             if curr_line % 200000 == 0:
                 print("Processed " + str(curr_line) + " lines out of " + str(num_lines) + " (" + str(round(curr_line/num_lines*100, 2)) + "%)")
@@ -61,6 +72,7 @@ def main():
         print(light + ": "+ str(event_counts_per_light[light]))
         total_light_events += event_counts_per_light[light]
     print("Number of total light change events: " + str(total_light_events))
+    print("Number of days with light change events: " + str(len(days_with_transitions)))
 
     print("\nTime gap between a light event and the previous event (light or non-light)")
     print("Mean: " + str(np.mean(diffs)))
@@ -152,6 +164,15 @@ def get_device(line):
 
 def get_device_type(device):
     return device[0]
+
+def get_date(line):
+    fields = line.split()
+    timestamp_str = fields[0] + ' ' + fields[1]
+    try:
+        date = datetime.datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S.%f").date()
+    except ValueError:
+        date = datetime.datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S").date()
+    return date
 
 def get_timestamp(line):
     fields = line.split()
