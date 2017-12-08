@@ -39,7 +39,7 @@
 
 from time import time
 
-LOAD_FOLDER = "stateful_data/"
+LOAD_FOLDER = "stateful_data/action/"
 FILENAME_STEM = "twor2010_1s"
 #FILENAME_STEM = "stupid_simple_1s"
 DATA_FILE = FILENAME_STEM + "_full"
@@ -58,6 +58,10 @@ TIMEFRAME_NAMES = {ONE_DAY_SECS: "one_day",
                    TWO_WEEK_SECS: "two_weeks",
                    ONE_MONTH_SECS: "one_month"}
 
+#BIAS = 3 * ONE_MONTH_SECS
+
+START_ON = 1267594672.070476 #based on results from find_light_transitions.py
+
 INDENT = "    "
 
 def main():
@@ -68,6 +72,12 @@ def main():
     print(INDENT + lines[1].rstrip()),
     print(INDENT + "...")
     print(INDENT + lines[-1])
+    print("removing column headers...")
+    headers = lines.pop(0)
+    #print("applying bias...")
+    #lines = leftstrip(lines, BIAS)
+    print("shifting timeline ahead to desired start time...")
+    lines = leftstrip(lines, START_ON)
     # get start time for testing
     print("calculating start and end times for timeframes...")
     start_times_training, end_time_training = get_training_times(lines, TIMEFRAMES)
@@ -92,12 +102,11 @@ def main():
 
     # write the column headings
     for timeframe in TIMEFRAMES:
-        training_file_handles[timeframe].write(lines[0])
-        testing_file_handles[timeframe].write(lines[0])
+        training_file_handles[timeframe].write(headers)
+        testing_file_handles[timeframe].write(headers)
 
     # copy each data line to the relevant files
-    data_lines = lines[1:]
-    for line in data_lines:
+    for line in lines:
         timestamp = get_timestamp(line)
         if timestamp <= end_time:
             for timeframe in TIMEFRAMES:
@@ -122,6 +131,17 @@ def main():
     close_files(testing_file_handles)
     print("saved data to the following files: ")
     print(get_save_file_str(training_file_names, testing_file_names))
+
+
+# removes a bias's worth of lines from the beginning
+def leftstrip(lines, start_time):
+    new_start_line = 0
+    first_timestamp = get_timestamp(lines[0])
+    timestamp = first_timestamp
+    while timestamp < start_time:
+        new_start_line += 1
+        timestamp = get_timestamp(lines[new_start_line])
+    return lines[new_start_line:]
 
 
 def print_progress_report(samples_processed, num_samples, start_chunk_time, update_chunk):
@@ -173,7 +193,7 @@ def get_testing_times(lines, timeframes):
     start_time_testing = None
     end_times_testing = {}
     max_duration_secs = timeframes[-1]
-    data_start_timestamp = get_timestamp(lines[1])
+    data_start_timestamp = get_timestamp(lines[0])
     start_time_testing = data_start_timestamp + max_duration_secs
     end_time_testing = start_time_testing + max_duration_secs
     for timeframe in timeframes:
@@ -185,7 +205,7 @@ def get_training_times(lines, timeframes):
     start_times_training = {}
     end_time_training = None
     max_duration_secs = timeframes[-1]
-    data_start_timestamp = get_timestamp(lines[1])
+    data_start_timestamp = get_timestamp(lines[0])
     end_time_training = data_start_timestamp + max_duration_secs
     for timeframe in timeframes:
         start_time_training = end_time_training - timeframe
