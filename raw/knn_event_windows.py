@@ -1,6 +1,11 @@
 #this is trying to predict a single light
 
+# Heavily borrowed from https://kevinzakka.github.io/2016/07/13/k-nearest-neighbor/
+
 import numpy as np
+from numpy import linalg as LA
+from collections import Counter
+#from sklearn.neighbors import KNeighborsClassifier
 
 #features_filename = "build/events/raw/no_light_no_time/L005_20_features.npy"
 #labels_filename = "build/events/raw/no_light_no_time/L005_20_labels.npy"
@@ -74,8 +79,82 @@ def main():
 
     # TRAIN KNN HERE
 
+    print(type(x_train))
+    #print("First element of x_train: ", x_train[0:3], " First Element of y_train: ", y_train[0:3])
+    #print("First element of x_val: ", x_val[0:3], " First Element of y_val: ", y_val[0:3])
+    #print("Length of first element of x_train: ", matrix_distance(x_train[0]))
+    #print("Length of third element of x_train: ", matrix_distance(x_train[2]))
+    prediction = predict(x_train, y_train, x_val[0], 3)
+    print(prediction)
+    predictions = kNearestNeighbor(x_train, y_train, x_val[0:3], 3)
+    print(predictions)
+    print("First three expected predictions: ", y_val[0:3])
+
+    """
+    # Using sklearn.neighbors KNN algorithm, doesn't work bc dimensions off
+    #instantiate Learning Model using sklearn.neighbors
+    knn = KNeighborsClassifier(n_neighbors = 5)
+
+    # fitting the model
+    knn.fit(x_train, y_train)
+
+
     print("training and testing model...")
 
     # TEST KNN HERE
 
+    pred = knn.predict(x_val)
+
+    print("Accuracy score: ", accuracy_score(y_val, pred))
+    """
+def kNearestNeighbor(X_train, y_train, X_test, k):
+    # train on input data
+
+    # loop over all observations
+    predictions = []
+    for i in range(len(X_test)):
+        predictions.append(predict(X_train, y_train, X_test[i,:], k))
+    
+    # return the predictions made
+    return predictions
+
+
+# Function that predicts where an unsigned label will go based on training data
+def predict(X_train, y_train, x_test, k):
+    distances = []
+    targets = []
+
+    for i in range(len(X_train)):
+        # compute l2 norm distance between matrices
+        # TODO: Want to update this so over all predicts, we have already calculated the distance of each matrix from a "0" matrix and then we only need to subtract the difference between each matrix here
+        dist = matrices_distance(X_train[i,:], x_test)
+        distances.append([dist, i])
+
+    # sort the list of distances
+    distances = sorted(distances)
+
+    # make a list of the k neighbors' targets
+    for i in range(k):
+        index = distances[i][1]
+        targets.append(tuple(y_train[index,:].tolist()))
+
+    # return most common target
+    return list(Counter(targets).most_common(1)[0][0])
+
+# Calculates distance between two matrices based on the difference in each row
+def matrices_distance(m1, m2):
+    m1_distances = matrix_distance(m1)
+    m2_distances = matrix_distance(m2)
+    m1_distance = sum(m1_distances)
+    m2_distance = sum(m2_distances)
+    return m1_distance - m2_distance
+
+# Returns a list of the lengths of each row of one matrix
+def matrix_distance(matrix):
+    v_distances = []
+    for i in range(len(matrix)):
+        row_dist = LA.norm(matrix[i,:])   # Calculates the Euclidean/Frobenius norm
+        v_distances.append(row_dist)
+    return v_distances
+    
 main()
