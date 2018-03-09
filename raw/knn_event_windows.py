@@ -49,6 +49,8 @@ output_train_filename = load_folder + "L005_40_one_month_train_labels.npy"
 input_test_filename = load_folder + "L005_40_one_month_test_features.npy"
 output_test_filename = load_folder + "L005_40_one_month_test_labels.npy"
 
+# row size of an array in the test y_test/val matrix
+y_test_row_size = 3
 
 def main():
 
@@ -78,17 +80,26 @@ def main():
     print("building model...")
 
     # TRAIN KNN HERE
-
+    """
     print(type(x_train))
-    #print("First element of x_train: ", x_train[0:3], " First Element of y_train: ", y_train[0:3])
+    print("First element of y_train: ", y_train[0][0], "First row of second element of y_train: ", y_train[1][0], " First Element of y_train: ", y_train[0:2])
+    print("Distance of first row of x_train1 and x_train2): ", row_vector_distance(y_train[0], y_train[1]))
+    test1 = np.zeros((4, 4))
+    test2 = np.ones((4, 4))
+    print(len(test1.shape))
+    print("distance between np array of 0s and 1s: ", row_vector_distance(test1, test2))
+    print("matrix distance between np array of 0s and 1s: ", matrices_distance(test1, test2))
+    
+    """
     #print("First element of x_val: ", x_val[0:3], " First Element of y_val: ", y_val[0:3])
     #print("Length of first element of x_train: ", matrix_distance(x_train[0]))
     #print("Length of third element of x_train: ", matrix_distance(x_train[2]))
     prediction = predict(x_train, y_train, x_val[0], 3)
     print(prediction)
     predictions = kNearestNeighbor(x_train, y_train, x_val[0:3], 3)
-    print(predictions)
+    print("First three actual predictions: ", predictions )
     print("First three expected predictions: ", y_val[0:3])
+    """
 
     """
     # Using sklearn.neighbors KNN algorithm, doesn't work bc dimensions off
@@ -141,6 +152,32 @@ def predict(X_train, y_train, x_test, k):
     # return most common target
     return list(Counter(targets).most_common(1)[0][0])
 
+# Calculates the Euclidean distance btween two 2d numpy arrays
+def matrices_distance(m1, m2):
+    # if the two matrices are not the same shape, cannot compute the difference in size
+    if m1.shape != m2.shape:
+        print("ERROR: Cannot calculate distance bewteen matrices of different sizes")
+    else:
+        # if the matrices are 1d np arrays, calculate the Euclidean difference of the row
+        if len(m1.shape) == 1:
+            return row_vector_distance(m1, m2)
+
+        # calculate the sum of the euclidean distances of each row
+        else:
+            vector_distances = []
+            for i in range(m1.shape[0]):
+                print(i)
+                row_dist = row_vector_distance(m1[i,:], m2[i,:])
+                vector_distances.append(row_dist)
+            return sum(vector_distances)
+
+# Calculates the Euclidean distance between two 1d numpy arrays
+def row_vector_distance(v1, v2):
+    return np.sqrt(np.sum((v1 - v2) ** 2))
+
+"""
+# Old Distance metric, just calculates size of each individual row and finds the difference in size between two matrices. ** Not super accurate 
+
 # Calculates distance between two matrices based on the difference in each row
 def matrices_distance(m1, m2):
     m1_distances = matrix_distance(m1)
@@ -156,5 +193,6 @@ def matrix_distance(matrix):
         row_dist = LA.norm(matrix[i,:])   # Calculates the Euclidean/Frobenius norm
         v_distances.append(row_dist)
     return v_distances
-    
+"""
+
 main()
