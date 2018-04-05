@@ -12,6 +12,7 @@ TODO: (1) check if euclidean distance is accurate on trained values using k = 1 
 import numpy as np
 from numpy import linalg as LA
 from collections import Counter
+from time import time
 #from sklearn.neighbors import KNeighborsClassifier
 
 #features_filename = "build/events/raw/no_light_no_time/L005_20_features.npy"
@@ -73,10 +74,10 @@ def main():
 
     print("data loaded...")
 
-    print(x_train.shape)
-    print(x_val.shape)
-    print(y_train.shape)
-    print(y_val.shape)
+    print("x_train's shape: ", x_train.shape)
+    print("x_val's shape: ", x_val.shape)
+    print("y_train's shape: ", y_train.shape)
+    print("y_val's shape: ", y_val.shape)
 
     if len(x_train) != len(y_train):
         print("uh oh...features and labels are different sizes.")
@@ -104,19 +105,28 @@ def main():
     print("matrix distance between np array of 0s and 1s: ", matrices_distance(test1, test2))
     
     """
-    start = 300
-
-    print(start, " index element of x_val: ", x_train[start], start, " index element of y_val: ", y_train[start])
-    prediction = predict(x_train, y_train, x_train[start], 3)
-    print(prediction)
-    #print(y_val) 
-    #Tests for kNearestNeighbor
-
-    #predictions = kNearestNeighbor(x_train, y_train, x_val[0:3], 3)
-    #print("First three actual predictions: ", predictions )
-    #print("First three expected predictions: ", y_val[0:3])
-
+    start = 0
     """
+    print("======================Predict function testing========================")
+    #print(start, " index element of x_val: ", x_train[start], start, " index element of y_val: ", y_train[start])
+    starttime = time()
+    prediction = predict(x_train, y_train, x_val[start], 3)
+    print(prediction)
+    print(y_val[start])
+    print(time() - starttime)
+    """
+    #Tests for kNearestNeighbor
+    print("==============Test for kNearestNeighbor=================")
+    #print("X_train: ", x_train)
+    starttime = time()
+    predictions = kNearestNeighbor(x_train, y_train, x_val[start: start + 3], 3)
+    print("First three actual predictions: ", predictions)
+    print("First three expected predictions: ", y_val[start: start + 3])
+    predictions = kNearestNeighbor(x_train, y_train, x_val, 3)
+    print(time() - starttime)
+    print("First three actual predictions: ", predictions)
+    """
+    #print("First three expected predictions: ", y_val)
     # fitting the model
     knn.fit(x_train, y_train)
 
@@ -143,9 +153,9 @@ def kNearestNeighbor(X_train, y_train, X_test, k):
 
 
 # Function that predicts where an unsigned label will go based on training data
-""" Parameters: X_train: entire x_train matrix that we train over
-y_train: entire y_train matrix we train over
-x_test: single x_matrix we test
+""" Parameters: X_train: entire x_train matrix that we train over (3d array)
+y_train: entire y_train matrix we train over (2d array)
+x_test: single x_matrix we test (2d array)
 k: number of nearest neighbors we use to decide what prediction x_test will be (MUST BE ODD)
 """
 def predict(X_train, y_train, x_test, k):
@@ -155,6 +165,8 @@ def predict(X_train, y_train, x_test, k):
     for i in range(len(X_train)):
         # compute l2 norm distance between matrices
         # TODO: Want to update this so over all predicts, we have already calculated the distance of each matrix from a "0" matrix and then we only need to subtract the difference between each matrix here
+        #print(X_train)
+        #print("X_train shape: ", X_train[i,:].shape, "xtest shape: ", x_test.shape)
         dist = matrices_distance(X_train[i,:], x_test)
         distances.append([dist, i])
     #print(distances)
@@ -169,7 +181,7 @@ def predict(X_train, y_train, x_test, k):
         index = distances[i][1]
         targets.append(tuple(y_train[index,:].tolist()))
     
-    #print(targets)
+    print(targets)
     # return most common target
     # TODO: bug, if more than one thing appears at the same frequency, arbitrarily chooses one
     # Probably want to weight it so the one with the closest distance is picked instead
@@ -179,7 +191,7 @@ def predict(X_train, y_train, x_test, k):
 def matrices_distance(m1, m2):
     # if the two matrices are not the same shape, cannot compute the difference in size
     if m1.shape != m2.shape:
-        print("ERROR: Cannot calculate distance bewteen matrices of different sizes")
+        print("ERROR: Cannot calculate distance bewteen matrices of different sizes. M1 shape: ", m1.shape, ". M2 shape: ", m2.shape)
         return
     # if the matrices are 1d np arrays, calculate the Euclidean difference of the row
     if len(m1.shape) == 1:
