@@ -96,15 +96,23 @@ def main():
     num_samples = len(x_train)
     timesteps = len(x_train[0]) #number of timesteps per batch
 
+    turn_on_percent = round((np.sum(y_val[:,1])/len(y_val[:,1]))*100, 2)
+    turn_off_percent = round((np.sum(y_val[:,0])/len(y_val[:,0]))*100, 2)
+    nop_percent = 100 - (turn_off_percent + turn_on_percent)
+    print("   light turns on in " + str(turn_on_percent) + " percent of test cases")
+    print("   light turns off in " + str(turn_off_percent) + " percent of test cases")
+    print("   light does nothing in " + str(turn_off_percent) + " percent of test cases")
+    print("   test accuracy must be higher than {}%".format(str(round(max(turn_on_percent, turn_off_percent, nop_percent), 2))))
+
     print("building model...")
 
     # TRAIN KNN HERE
-    
+
     """
     #print(type(x_train))
     #print("First element of y_train: ", y_train[0][0], "First row of second element of y_train: ", y_train[1][0], " First Element of y_train: ", y_train[0:2])
     #print("Distance of first row of x_train1 and x_train2): ", row_vector_distance(y_train[0], y_train[1]))
-    
+
     #TESTS TO SEE IF matrices_distance and row_vector_distance WORK
     test1 = np.zeros((4, 4))
     test2 = np.ones((4, 4))
@@ -112,7 +120,7 @@ def main():
     print((test1.shape), " ", len(test1.shape))
     print("distance between np array of 0s and 1s: ", row_vector_distance(test1, test2))
     print("matrix distance between np array of 0s and 1s: ", matrices_distance(test1, test2))
-    
+
     """
     """
     print("======================Predict function testing========================")
@@ -134,14 +142,14 @@ def main():
     # running my own Prediction
     if (MINE == True):
         print("Running Sarah's implementation")
-        predictions = kNearestNeighbor(trainx, trainy, testx, 1, testy.shape)
+        predictions = kNearestNeighbor(trainx, trainy, testx, 17, testy.shape)
     # running kNeighbors from sklearn
     else :
         print("Running sklearn's KNeighborsClassifier")
         from sklearn.neighbors import KNeighborsClassifier
 
         knn = KNeighborsClassifier(n_neighbors=1)
-    
+
         # reshape data from 3d array to 2d array
         nsamples, nx, ny = trainx.shape
         trainx = trainx.reshape((nsamples, nx*ny))
@@ -167,7 +175,7 @@ def kNearestNeighbor(X_train, y_train, X_test, k, y_shape):
     predictions = np.zeros(shape=y_shape)
     for i in range(len(X_test)):
         predictions[i] = predict(X_train, y_train, X_test[i,:], k)
-    
+
     # return the predictions made
     return predictions
 
@@ -200,7 +208,7 @@ def predict(X_train, y_train, x_test, k):
     for i in range(k):
         index = distances[i][1]
         targets.append(tuple(y_train[index,:].tolist()))
-    
+
     #print(targets)
     # return most common target
     # TODO: bug, if more than one thing appears at the same frequency, arbitrarily chooses one
@@ -226,7 +234,7 @@ def matrices_distance(m1, m2):
         return sum(vector_distances)
 
 def matrix_distance(m1):
-    return matrices_distance(m1, np.zeros(m1.shape)) 
+    return matrices_distance(m1, np.zeros(m1.shape))
 
 # Calculates the Euclidean distance between two 1d numpy arrays
 def row_vector_distance(v1, v2):
@@ -241,7 +249,7 @@ def row_vector_distance(v1, v2):
     return np.sqrt(np.sum((v1 - v2) ** 2))
 
 """
-# Old Distance metric, just calculates size of each individual row and finds the difference in size between two matrices. ** Not super accurate 
+# Old Distance metric, just calculates size of each individual row and finds the difference in size between two matrices. ** Not super accurate
 
 # Calculates distance between two matrices based on the difference in each row
 def matrices_distance(m1, m2):
