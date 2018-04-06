@@ -13,7 +13,7 @@ import numpy as np
 from numpy import linalg as LA
 from collections import Counter
 from time import time
-#from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score
 
 #features_filename = "build/events/raw/no_light_no_time/L005_20_features.npy"
 #labels_filename = "build/events/raw/no_light_no_time/L005_20_labels.npy"
@@ -40,8 +40,11 @@ load_folder = "build/events/raw/light_and_time/"
 #input_train_filename = load_folder + "L005_40_two_weeks_train_features.npy"
 #output_train_filename = load_folder + "L005_40_two_weeks_train_labels.npy"
 
-input_train_filename = load_folder + "L005_40_one_month_train_features.npy"
-output_train_filename = load_folder + "L005_40_one_month_train_labels.npy"
+#input_train_filename = load_folder + "L005_40_one_month_train_features.npy"
+#output_train_filename = load_folder + "L005_40_one_month_train_labels.npy"
+
+input_train_filename = load_folder + "L005_5_one_month_train_features.npy"
+output_train_filename = load_folder + "L005_5_one_month_train_labels.npy"
 
 ##### TESTS
 
@@ -54,11 +57,17 @@ output_train_filename = load_folder + "L005_40_one_month_train_labels.npy"
 #input_test_filename = load_folder + "L005_40_two_weeks_test_features.npy"
 #output_test_filename = load_folder + "L005_40_two_weeks_test_labels.npy"
 
-input_test_filename = load_folder + "L005_40_one_month_test_features.npy"
-output_test_filename = load_folder + "L005_40_one_month_test_labels.npy"
+#input_test_filename = load_folder + "L005_40_one_month_test_features.npy"
+#output_test_filename = load_folder + "L005_40_one_month_test_labels.npy"
+
+input_test_filename = load_folder + "L005_5_one_month_test_features.npy"
+output_test_filename = load_folder + "L005_5_one_month_test_labels.npy"
 
 # row size of an array in the test y_test/val matrix
 y_test_row_size = 3
+
+# Are we running my defined model? True = yes, false = sklearn
+MINE = True
 
 def main():
 
@@ -105,7 +114,6 @@ def main():
     print("matrix distance between np array of 0s and 1s: ", matrices_distance(test1, test2))
     
     """
-    start = 0
     """
     print("======================Predict function testing========================")
     #print(start, " index element of x_val: ", x_train[start], start, " index element of y_val: ", y_train[start])
@@ -119,34 +127,46 @@ def main():
     print("==============Test for kNearestNeighbor=================")
     #print("X_train: ", x_train)
     starttime = time()
-    predictions = kNearestNeighbor(x_train, y_train, x_val[start: start + 3], 3)
-    print("First three actual predictions: ", predictions)
-    print("First three expected predictions: ", y_val[start: start + 3])
-    predictions = kNearestNeighbor(x_train, y_train, x_val, 3)
-    print(time() - starttime)
-    print("First three actual predictions: ", predictions)
-    """
-    #print("First three expected predictions: ", y_val)
-    # fitting the model
-    knn.fit(x_train, y_train)
+    trainx = x_train
+    trainy = y_train
+    testx = x_val
+    testy = y_val
+    # running my own Prediction
+    if (MINE == True):
+        print("Running Sarah's implementation")
+        predictions = kNearestNeighbor(trainx, trainy, testx, 1, testy.shape)
+    # running kNeighbors from sklearn
+    else :
+        print("Running sklearn's KNeighborsClassifier")
+        from sklearn.neighbors import KNeighborsClassifier
 
+        knn = KNeighborsClassifier(n_neighbors=1)
+    
+        # reshape data from 3d array to 2d array
+        nsamples, nx, ny = trainx.shape
+        trainx = trainx.reshape((nsamples, nx*ny))
+        print(trainx.shape)
+        nsamples, nx, ny = testx.shape
+        testx = testx.reshape((nsamples, nx*ny))
+        print(testx.shape)
+        # training the model
+        knn.fit(trainx, trainy)
 
-    print("training and testing model...")
+        # predicting the response
+        predictions = knn.predict(testx)
 
-    # TEST KNN HERE
+    print(time() - starttime, " sec elapsed")
+    accuracy = accuracy_score(predictions, testy) * 100
+    print("Accuracy of kNN: ", accuracy, "%")
 
-    pred = knn.predict(x_val)
-
-    print("Accuracy score: ", accuracy_score(y_val, pred))
-    """
-
-def kNearestNeighbor(X_train, y_train, X_test, k):
+# Perform nearest neighbor given training np arrays and k = number of neigbors included, y_shape = shape of expected prediction
+def kNearestNeighbor(X_train, y_train, X_test, k, y_shape):
     # train on input data
 
     # loop over all observations
-    predictions = []
+    predictions = np.zeros(shape=y_shape)
     for i in range(len(X_test)):
-        predictions.append(predict(X_train, y_train, X_test[i,:], k))
+        predictions[i] = predict(X_train, y_train, X_test[i,:], k)
     
     # return the predictions made
     return predictions
@@ -181,11 +201,11 @@ def predict(X_train, y_train, x_test, k):
         index = distances[i][1]
         targets.append(tuple(y_train[index,:].tolist()))
     
-    print(targets)
+    #print(targets)
     # return most common target
     # TODO: bug, if more than one thing appears at the same frequency, arbitrarily chooses one
     # Probably want to weight it so the one with the closest distance is picked instead
-    return list(Counter(targets).most_common(1)[0][0])
+    return np.array(list(Counter(targets).most_common(1)[0][0]))
 
 # Calculates the Euclidean distance btween two 2d numpy arrays
 def matrices_distance(m1, m2):
