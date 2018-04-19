@@ -34,11 +34,11 @@ desired_input_types = ['M', 'D', 'L'] # events from motion, door, and light sens
 desired_label_types = ['L'] #predicting the next light event
 features_save_filename = "features.npy"
 labels_save_filename = "labels.npy"
-#save_folder = "build/events/raw/light_and_time/"
+save_folder = "build/events/raw/light_and_time/"
 #save_folder = "build/events/raw/no_light_no_time/"
-save_folder = "build/events/raw/yes_light_no_time/"
+#save_folder = "build/events/raw/yes_light_no_time/"
 
-add_time = False
+add_time = True
 add_light_state = True
 
 desired_events = {'M': ['OFF', 'ON'],
