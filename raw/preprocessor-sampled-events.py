@@ -23,8 +23,8 @@ import random
 #filetime = "_one_week_test"
 #filetime = "_two_weeks_train"
 #filetime = "_two_weeks_test"
-#filetime = "_one_month_train"
-filetime = "_one_month_test"
+filetime = "_one_month_train"
+#filetime = "_one_month_test"
 filename = "event_data/twor2010" + filetime
 master_file = "../data/twor2010"
 
@@ -34,10 +34,11 @@ desired_input_types = ['M', 'D', 'L'] # events from motion, door, and light sens
 desired_label_types = ['L'] #predicting the next light event
 features_save_filename = "features.npy"
 labels_save_filename = "labels.npy"
-save_folder = "build/events/raw/light_and_time/"
+#save_folder = "build/events/raw/light_and_time/"
 #save_folder = "build/events/raw/no_light_no_time/"
+save_folder = "build/events/raw/yes_light_no_time/"
 
-add_time = True
+add_time = False
 add_light_state = True
 
 desired_events = {'M': ['OFF', 'ON'],
@@ -47,7 +48,7 @@ desired_events = {'M': ['OFF', 'ON'],
 
 indent = "    "
 
-window_size = 40  # need to find best window size
+window_size = 5  # need to find best window size
 
 
 def main():
