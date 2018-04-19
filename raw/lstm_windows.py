@@ -17,7 +17,8 @@ import numpy as np
 #features_filename = "build/events/activities/light_and_time/L005_40_features.npy"
 #labels_filename = "build/events/activities/light_and_time/L005_40_labels.npy"
 
-load_folder = "build/events/activities/light_and_time/"
+#load_folder = "build/events/activities/light_and_time/"
+load_folder = "build/events/raw/light_and_time/"
 
 ##### TRAIN
 
@@ -30,8 +31,11 @@ load_folder = "build/events/activities/light_and_time/"
 #input_train_filename = load_folder + "L005_40_two_weeks_train_features.npy"
 #output_train_filename = load_folder + "L005_40_two_weeks_train_labels.npy"
 
-input_train_filename = load_folder + "L005_40_one_month_train_features.npy"
-output_train_filename = load_folder + "L005_40_one_month_train_labels.npy"
+#input_train_filename = load_folder + "L005_40_one_month_train_features.npy"
+#output_train_filename = load_folder + "L005_40_one_month_train_labels.npy"
+
+input_train_filename = load_folder + "L005_5_one_month_train_features.npy"
+output_train_filename = load_folder + "L005_5_one_month_train_labels.npy"
 
 ##### TESTS
 
@@ -44,8 +48,11 @@ output_train_filename = load_folder + "L005_40_one_month_train_labels.npy"
 #input_test_filename = load_folder + "L005_40_two_weeks_test_features.npy"
 #output_test_filename = load_folder + "L005_40_two_weeks_test_labels.npy"
 
-input_test_filename = load_folder + "L005_40_one_month_test_features.npy"
-output_test_filename = load_folder + "L005_40_one_month_test_labels.npy"
+#input_test_filename = load_folder + "L005_40_one_month_test_features.npy"
+#output_test_filename = load_folder + "L005_40_one_month_test_labels.npy"
+
+input_test_filename = load_folder + "L005_5_one_month_test_features.npy"
+output_test_filename = load_folder + "L005_5_one_month_test_labels.npy"
 
 
 def main():
