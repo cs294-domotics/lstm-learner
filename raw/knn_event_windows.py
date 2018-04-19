@@ -40,11 +40,11 @@ load_folder = "build/events/raw/light_and_time/"
 #input_train_filename = load_folder + "L005_40_two_weeks_train_features.npy"
 #output_train_filename = load_folder + "L005_40_two_weeks_train_labels.npy"
 
-#input_train_filename = load_folder + "L005_40_one_month_train_features.npy"
-#output_train_filename = load_folder + "L005_40_one_month_train_labels.npy"
+input_train_filename = load_folder + "L005_40_one_month_train_features.npy"
+output_train_filename = load_folder + "L005_40_one_month_train_labels.npy"
 
-input_train_filename = load_folder + "L005_5_one_month_train_features.npy"
-output_train_filename = load_folder + "L005_5_one_month_train_labels.npy"
+#input_train_filename = load_folder + "L005_5_one_month_train_features.npy"
+#output_train_filename = load_folder + "L005_5_one_month_train_labels.npy"
 
 ##### TESTS
 
@@ -57,11 +57,11 @@ output_train_filename = load_folder + "L005_5_one_month_train_labels.npy"
 #input_test_filename = load_folder + "L005_40_two_weeks_test_features.npy"
 #output_test_filename = load_folder + "L005_40_two_weeks_test_labels.npy"
 
-#input_test_filename = load_folder + "L005_40_one_month_test_features.npy"
-#output_test_filename = load_folder + "L005_40_one_month_test_labels.npy"
+input_test_filename = load_folder + "L005_40_one_month_test_features.npy"
+output_test_filename = load_folder + "L005_40_one_month_test_labels.npy"
 
-input_test_filename = load_folder + "L005_5_one_month_test_features.npy"
-output_test_filename = load_folder + "L005_5_one_month_test_labels.npy"
+#input_test_filename = load_folder + "L005_5_one_month_test_features.npy"
+#output_test_filename = load_folder + "L005_5_one_month_test_labels.npy"
 
 # row size of an array in the test y_test/val matrix
 y_test_row_size = 3
@@ -142,7 +142,7 @@ def main():
     # running my own Prediction
     if (MINE == True):
         print("Running Sarah's implementation")
-        predictions = kNearestNeighbor(trainx, trainy, testx, 17, testy.shape)
+        predictions = kNearestNeighbor(trainx, trainy, testx, 25, testy.shape)
     # running kNeighbors from sklearn
     else :
         print("Running sklearn's KNeighborsClassifier")
