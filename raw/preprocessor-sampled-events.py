@@ -15,7 +15,7 @@ from copy import copy, deepcopy
 import datetime
 from time import time
 import random
-
+import os
 
 #filetime = "_one_day_train"
 #filetime = "_one_day_test"
@@ -58,6 +58,7 @@ window_size = 5  # need to find best window size
 
 
 def main():
+    ensure_dir(save_folder) 
     # get data and metadata
     print("loading data...")
     _, input_device_buckets, label_device_buckets, first_timestamps = load_data(master_file)
@@ -103,6 +104,10 @@ def main():
             label_filename = save_folder + str(device) + "_" + str(window_size) + filetime + "_" + labels_save_filename
             save_vectors(input_samples, label_samples, feature_filename, label_filename)
             print("saved samples to " + feature_filename + " and " + label_filename)
+
+def ensure_dir(dir_path):
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
 
 def add_time_of_day(input_vectors, timestamps):
     time_of_day = 0 #night

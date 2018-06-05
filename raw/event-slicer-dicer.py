@@ -39,6 +39,7 @@
 
 from time import time
 import datetime
+import os
 
 LOAD_FOLDER = "../data/"
 FILENAME_STEM = "twor2010"
@@ -66,6 +67,7 @@ START_ON = 1267594672.070476 #based on results from find_light_transitions.py
 INDENT = "    "
 
 def main():
+    ensure_dir(SAVE_FOLDER) 
     TIMEFRAMES.sort() # just in case
     print("loading data...")
     lines = load_data(FILENAME)
@@ -126,6 +128,10 @@ def main():
     print("saved data to the following files: ")
     print(get_save_file_str(training_file_names, testing_file_names))
 
+
+def ensure_dir(dir_path):
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
 
 # removes a bias's worth of lines from the beginning
 def leftstrip(lines, start_time):
