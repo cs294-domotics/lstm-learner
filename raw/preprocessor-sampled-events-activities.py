@@ -17,14 +17,14 @@ from time import time
 import random
 import os
 
-#filetime = "_one_day_train"
+filetime = "_one_day_train"
 #filetime = "_one_day_test"
 #filetime = "_one_week_train"
 #filetime = "_one_week_test"
 #filetime = "_two_weeks_train"
 #filetime = "_two_weeks_test"
 #filetime = "_one_month_train"
-filetime = "_one_month_test"
+#filetime = "_one_month_test"
 filename = "event_data/twor2010" + filetime
 master_file = "../data/twor2010"
 
