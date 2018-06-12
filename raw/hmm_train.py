@@ -99,22 +99,23 @@ def main():
         train_prediction_labels = to_label_list(train_predictions, label_invert)
         test_prediction_labels  = to_label_list(test_predictions,  label_invert)
         print(f'  tabulating results...')
-        train_acc, train_corr, train_count = get_accuracy(train_labels, train_prediction_labels)
-        test_acc,  test_corr,  test_count  = get_accuracy(test_labels,  test_prediction_labels )
+        train_acc, train_meta = get_accuracy(train_labels, train_prediction_labels)
+        test_acc,  test_meta  = get_accuracy(test_labels,  test_prediction_labels )
+        train_meta['file'] = train_filename
+        test_meta['file'] = test_filename
         print(f'    training data:')
         print(f'        accuracy: {train_acc}')
-        print(f'        correct : {train_corr}')
-        print(f'        total   : {train_count}')
         print(f'    test data:')
         print(f'        accuracy: {test_acc}')
-        print(f'        correct : {test_corr}')
-        print(f'        total   : {test_count}')
-        return {'train': { 'accuracy' : train_acc,
-                           'correct' : train_corr,
-                           'total' : train_count},
-                'test': { 'accuracy' : test_acc,
-                           'correct' : test_corr,
-                           'total' : test_count}}
+
+        return {  'master' : master_file,
+                  'run_at' : datetime.datetime.now(),
+                  'data_len' : data_len, 
+                 'num_states' : num_states,
+                 'max_iter' : max_iter,
+                 'conv_thresh' : conv_thresh, 
+                 'train': train_meta,
+                 'test': test_meta}
                 # 'model': model}
 
     results = []
@@ -126,14 +127,41 @@ def main():
     
 
 def get_accuracy(data, preds):
-    count = 0
-    correct = 0
+    """
+    Returns the accuracy of the HMM model, weighted to match the
+    sampling scheme the LSTM model uses.
+
+    returns:
+      - The weighted accuracy
+      - A more detailed blob of metadata 
+    """
+    light_count, light_correct = (0,0)
+    other_count, other_correct = (0,0)
+    light_weight = 2/3
+    other_weight = 1/3 
     for symb, pred in zip(data, preds):
         s = symb if symb[0] in desired_label_types else "OTHER"
         p = pred if pred[0] in desired_label_types else "OTHER"
-        count += 1
-        if s == p: correct += 1
-    return (correct/count), correct, count
+        if symb[0] in desired_label_types:
+            light_count += 1 
+            if s == p: light_correct += 1
+        else:
+            other_count += 1 
+            if s == p: other_correct += 1
+    light_acc = light_correct / light_count
+    other_acc = other_correct / other_count
+    total_acc = (light_acc * light_weight) + (other_acc * other_weight) 
+    return total_acc, {'accuracy' : total_acc,
+                       'total'   : light_count + other_count,
+                       'correct' : light_correct + other_correct,
+                       'light' : { 'weight' : light_weight,
+                                   'accuracy' : light_acc,
+                                   'correct' : light_correct,
+                                   'total' : light_count},
+                       'other' : { 'weight' : other_weight,
+                                   'accuracy' : other_acc,
+                                   'correct' : other_correct,
+                                   'total' : other_count}}                               
 
 def to_label_list(data, invert_label):
     """
