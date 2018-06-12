@@ -41,9 +41,18 @@ def main():
     train_vector = generate_sample_vector(train_data, event_labels) 
     test_vector = generate_sample_vector(test_data, event_labels)
     print(n_events)
-    model, train_inverse = train_hmm(train_vector, n_events, 20)
-    print(model)
-
+    model, model_space_inverse = train_hmm(train_vector, 20)
+    # TODO :: - Take the training and test vectors and move them into model
+    #          space, by inverting model_space_inverse.
+    #        - Concat the model space train and test vectors
+    #        - Generate the model priors for every step
+    #        - multiply the model priors by the emission matrix for every
+    #          step to get the probability for each next emitted element.
+    #        - Take the index of the maximum value for each one
+    #        - apply model_space_inverse to move everything back into
+    #          event label space
+    #        - iterate through predictions and results to properly bin correct
+    #          and incorrect guesses, and get accuracy numbers. 
 
 #    model = hmm.MultinomialHMM(n_components = 4, init_params="", verbose=True)
 #    model.emissionprob_ = [[0.3, 0.3, 0.4],
@@ -78,10 +87,9 @@ def main():
 #        [0]]), array([1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2]))
 
 
-def train_hmm(data, n_events, n_states, max_iter = 1000, conv_thresh = 0.005):
+def train_hmm(data, n_states, max_iter = 1000, conv_thresh = 0.01):
     """
     data = the shape (len,1) sequence of symbols
-    n_events = the number of different events we may encounter
     n_states = the number of hidden states we train with
     max_iter = the maximum number of training steps allowed.
     conv_thresh = when we see log odds improvements of below this amount then
