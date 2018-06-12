@@ -165,10 +165,10 @@ def load_data(filename):
     #nearby_devices = ["M001", "M002", "M003", "M004", "M005", "M006", "M007", "M008", "M009", "M010", "M011", "M012", "M013", "M014", "M015", "M016", "M023" "D002", "L004", "L003", "L005"]
     #new_data = []
     #for line in data:
-#        d = get_device(line)
-#        if d in nearby_devices:
-#            new_data.append(line)
-#    data = new_data
+    #    d = get_device(line)
+    #    if d in nearby_devices:
+    #        new_data.append(line)
+    #data = new_data
 
     # get list of all devices in dataset sorted into buckets by type
     device_buckets, first_timestamps = get_devices(data)
