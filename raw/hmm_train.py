@@ -8,6 +8,7 @@ import datetime
 from time import time
 import random
 import os
+import pprint
 
 
 data_len = "_one_day"
@@ -29,19 +30,94 @@ desired_label_types = ['L'] #predicting the next light event
 
 save_folder = "build/events/hmm/"
 
+pp = pprint.PrettyPrinter(4)
 
 def main():
+    print(f'Loading data...')
     _, input_device_buckets, label_device_buckets, first_timestamps = load_data(master_file)
     train_data, _, _, _ = load_data(train_filename)
     test_data,  _, _, _ = load_data(test_filename)
     label_devices = flatten_buckets(label_device_buckets)
     _, _, event_labels = initialize_vector(input_device_buckets)
+    label_invert = invert_dict(event_labels) 
     n_events = len(event_labels)
-    print(event_labels)
     train_vector = generate_sample_vector(train_data, event_labels) 
-    test_vector = generate_sample_vector(test_data, event_labels)
-    print(n_events)
-    model, model_space_inverse = train_hmm(train_vector, 20)
+    to_model_space, from_model_space, filter_unseen, ms_indices = get_model_space(train_vector)
+    # NOTE :: We filter out events in the test data that don't occour in the
+    #        input data here, because our HMM chokes on symbols it hasn't seen
+    #        during training. 
+    test_vector = filter_unseen(generate_sample_vector(test_data, event_labels))
+    ms_train_vector = to_model_space(train_vector)
+    ms_test_vector = to_model_space(test_vector)
+    ms_full_vector = np.append(ms_train_vector, ms_test_vector, 0) 
+    ms_train_samples = ms_train_vector.shape[0]
+    ms_test_samples = ms_test_vector.shape[0]
+    ms_full_samples = ms_full_vector.shape[0]
+    train_labels = to_label_list(train_vector, label_invert)
+    test_labels = to_label_list(test_vector, label_invert)
+
+
+    def run_training(num_states, max_iter=1000, conv_thresh=0.01):
+        """
+        This function will train an HMM with some number of states, and
+        then verify it.
+
+        We define this here because it needs all the earlier variables
+        as context, but they don't need to be recalculated for each training
+        operation we do. 
+        """
+
+        print(f'Training {num_states} state hmm with \'{train_filename}\':')        
+        model = train_hmm(ms_train_vector, ms_indices, num_states,
+                          max_iter, conv_thresh)
+        print(f'  calculating predicted symbols...')
+        # this is probability distribution over states after the HMM sees each
+        # symbol 
+        posteriors = model.predict_proba(ms_full_vector)
+        # we insert the start condition, and since each posterior is the
+        # prior for the next symbols, everything aligns
+        priors = np.insert(posteriors, 0, model.startprob_, 0) 
+        # Then we multiply each prior probability with the emission
+        # matrix to get the predicted probabilities over each emitted
+        # symbol
+        emission_probs = np.matmul(priors, model.emissionprob_)
+        # Then we take the symbol with the maximal probability at each step
+        # so that we have the most likely outcome. 
+        ms_predictions = np.argmax(emission_probs, axis=1).reshape(-1,1)
+        # Convert that back into our original numerical labels
+        predictions = from_model_space(ms_predictions)
+        # split the predictions back out into their individual sequences. 
+        train_predictions = predictions[0:ms_train_samples]
+        test_predictions  = predictions[ms_train_samples:ms_train_samples+ms_test_samples]
+        # convert those into their nice readable label forms. 
+        train_prediction_labels = to_label_list(train_predictions, label_invert)
+        test_prediction_labels  = to_label_list(test_predictions,  label_invert)
+        print(f'  tabulating results...')
+        train_acc, train_corr, train_count = get_accuracy(train_labels, train_prediction_labels)
+        test_acc,  test_corr,  test_count  = get_accuracy(test_labels,  test_prediction_labels )
+        print(f'    training data:')
+        print(f'        accuracy: {train_acc}')
+        print(f'        correct : {train_corr}')
+        print(f'        total   : {train_count}')
+        print(f'    test data:')
+        print(f'        accuracy: {test_acc}')
+        print(f'        correct : {test_corr}')
+        print(f'        total   : {test_count}')
+        return {'train': { 'accuracy' : train_acc,
+                           'correct' : train_corr,
+                           'total' : train_count},
+                'test': { 'accuracy' : test_acc,
+                           'correct' : test_corr,
+                           'total' : test_count},
+                'model': model}
+
+    results = []
+    for n in range(10,100,20):
+        results.append(run_training(n))
+        print(f'Results to date:')
+
+
+    
     # TODO :: - Take the training and test vectors and move them into model
     #          space, by inverting model_space_inverse.
     #        - Concat the model space train and test vectors
@@ -54,40 +130,27 @@ def main():
     #        - iterate through predictions and results to properly bin correct
     #          and incorrect guesses, and get accuracy numbers. 
 
-#    model = hmm.MultinomialHMM(n_components = 4, init_params="", verbose=True)
-#    model.emissionprob_ = [[0.3, 0.3, 0.4],
-#                           [0.2, 0.7, 0.1],
-#                           [0.3, 0.1, 0.6],
-#                           [0.1, 0.1 ,0.1]]
-#
-#    model.fit([[1],
-#               [0],
-#               [1],
-#               [2]],
-#              lengths = [4])
-#    print(model.n_features)
-#    print(model.emissionprob_)
-#    print( model.sample(12))
-# 3
-# [[2.13928781e-01 6.46463204e-30 7.86071219e-01]
-#  [5.44240045e-68 1.00000000e+00 1.62758405e-34]
-#  [5.46941360e-01 2.21256534e-42 4.53058640e-01]
-#  [1.69342389e-01 3.90903304e-23 8.30657611e-01]]
-# (array([[1],
-#        [2],
-#        [1],
-#        [2],
-#        [1],
-#        [0],
-#        [1],
-#        [0],
-#        [1],
-#        [2],
-#        [1],
-#        [0]]), array([1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2]))
+def get_accuracy(data, preds):
+    count = 0
+    correct = 0
+    for symb, pred in zip(data, preds):
+        s = symb if symb[0] in desired_label_types else "OTHER"
+        p = pred if pred[0] in desired_label_types else "OTHER"
+        count += 1
+        if s == p: correct += 1
+    return (correct/count), correct, count
 
+def to_label_list(data, invert_label):
+    """
+    Takes a numpy array in the usual space and converts it to a list of labels
+    to make parsing and stuff easier. 
+    """
+    out = []
+    for x in np.concatenate(data):
+        out.append(invert_label[x])
+    return out
 
-def train_hmm(data, n_states, max_iter = 1000, conv_thresh = 0.01):
+def train_hmm(data, n_events, n_states, max_iter = 1000, conv_thresh = 0.01):
     """
     data = the shape (len,1) sequence of symbols
     n_states = the number of hidden states we train with
@@ -104,26 +167,71 @@ def train_hmm(data, n_states, max_iter = 1000, conv_thresh = 0.01):
     #        be in our list occour in some input sequence. So I'm going to
     #        get all the symbols that are in the input data, and create a
     #        sequence of all the non-relevant sym
-    inverse, indices = np.unique(data, return_inverse=True)
+    print(f'  initializing hmm...') 
     model = hmm.MultinomialHMM(n_components = n_states,
                                init_params="",
-                               verbose=True,
-                               n_iter=5,
+                               n_iter=2,
                                tol= -999999999)
-    model.emissionprob_ = normalize(np.random.rand(n_states, len(inverse)))
-    data = indices.reshape(-1,1)
+    model.emissionprob_ = normalize(np.random.rand(n_states, n_events))
     # We need to fit twice, because the model (for some reason) regresses
     # rather a lot on step 2 when we initialize from ... well any matrix
     # I've tried. From there it seems to work as expected so we set the number
     # of iterations and convergence threshold to somethig sane 
     model = model.fit(data, lengths=[data.shape[0]])
+    print(f'  finished initialization...') 
+    print(f'  starting training...') 
     model.n_iter = max_iter
     model.tol = conv_thresh
+    model.verbose = True
     model = model.fit(data, lengths=[data.shape[0]])
-    return model, inverse
+    print(f'  finished training...') 
+    return model
+
+def get_model_space(data):
+    """
+    given a list of numbers, gets the set of unique values an makes them a
+    consecutive series of integers, returns three functions to:
+      - transform the original data into that consecutive set
+      - transform from the consecutive space back into the original one
+      - filter an array of all elements not in the original data.
+    It also returns the number of states after redundant ones were eliminated
+    """
+    inverse_arr = np.unique(data)
+    from_model_space_dict = make_inverse_dict(inverse_arr)
+    to_model_space_dict = invert_dict(from_model_space_dict)
+    fms_func = np.vectorize(lambda x: from_model_space_dict[x])
+    tms_func = np.vectorize(lambda x: to_model_space_dict[x])
+    def filter_unseen(dat):
+        out = []
+        for val in np.concatenate(dat):
+            if val in to_model_space_dict:
+                out.append(val)
+        return np.array(out).reshape(-1,1) 
+    return tms_func, fms_func, filter_unseen, len(from_model_space_dict)
+
+def make_inverse_dict(inverse_array):
+    """
+    Take the inversion array that we get from np.unique an make it a dictionary
+    like all the other translations we use. 
+    """
+    out = {}
+    for ind, val in enumerate(inverse_array):
+        out[ind] = val
+    return out
+
+def invert_dict(d):
+    """
+    Take a dictionary (assuming all values are unique) and invert it. 
+    """
+    out = {}
+    for ind, val in d.items():
+        out[val] = ind
+    return out
 
 def generate_sample_vector(data, event_labels):
     """
+    NOTE :: heavily modified from the lstm preprocessor version
+
     given an input vector generates the sequence of symbols that serve
     as an output for a hidden markov machine. 
     """
@@ -261,6 +369,8 @@ def flatten_buckets(buckets):
 
 def initialize_vector(device_buckets):
     """
+    NOTE: This is rather different from the version in the lstm preprocessor
+
     figure out how many features the input vector will have
     devices and their possible event values according to type
     e.g., <m1_OFF, m1_ON, d1_CLOSED, d1_OPEN...>
