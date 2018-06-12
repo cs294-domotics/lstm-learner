@@ -108,8 +108,8 @@ def main():
                            'total' : train_count},
                 'test': { 'accuracy' : test_acc,
                            'correct' : test_corr,
-                           'total' : test_count},
-                'model': model}
+                           'total' : test_count}}
+                # 'model': model}
 
     results = []
     for n in range(10,100,20):
