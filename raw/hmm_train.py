@@ -39,9 +39,11 @@ def main():
     test_data,  _, _, _ = load_data(test_filename)
     label_devices = flatten_buckets(label_device_buckets)
     _, _, event_labels = initialize_vector(input_device_buckets)
+    # event_labels[label_invert[x]] = x if x was in event labels in the first place
     label_invert = invert_dict(event_labels) 
-    n_events = len(event_labels)
     train_vector = generate_sample_vector(train_data, event_labels) 
+    # HMM can only handle those symbols found in the training set, so we
+    # create a mapping to the subset of event labels that hmmlearn can handle
     to_model_space, from_model_space, filter_unseen, ms_indices = get_model_space(train_vector)
     # NOTE :: We filter out events in the test data that don't occour in the
     #        input data here, because our HMM chokes on symbols it hasn't seen
@@ -49,10 +51,14 @@ def main():
     test_vector = filter_unseen(generate_sample_vector(test_data, event_labels))
     ms_train_vector = to_model_space(train_vector)
     ms_test_vector = to_model_space(test_vector)
+    # we can do this because the test data immoderately follows the training
+    # data and the posterior for the last train event is the prior for the
+    # last test event. 
     ms_full_vector = np.append(ms_train_vector, ms_test_vector, 0) 
     ms_train_samples = ms_train_vector.shape[0]
     ms_test_samples = ms_test_vector.shape[0]
     ms_full_samples = ms_full_vector.shape[0]
+    # I want lists of the input labels for convinience later on. 
     train_labels = to_label_list(train_vector, label_invert)
     test_labels = to_label_list(test_vector, label_invert)
 
@@ -112,23 +118,12 @@ def main():
                 # 'model': model}
 
     results = []
-    for n in range(10,100,20):
-        results.append(run_training(n))
+    for states in range(10,200,20):
+        results.append(run_training(states))
         print(f'Results to date:')
-
+        pp.pprint(results)
 
     
-    # TODO :: - Take the training and test vectors and move them into model
-    #          space, by inverting model_space_inverse.
-    #        - Concat the model space train and test vectors
-    #        - Generate the model priors for every step
-    #        - multiply the model priors by the emission matrix for every
-    #          step to get the probability for each next emitted element.
-    #        - Take the index of the maximum value for each one
-    #        - apply model_space_inverse to move everything back into
-    #          event label space
-    #        - iterate through predictions and results to properly bin correct
-    #          and incorrect guesses, and get accuracy numbers. 
 
 def get_accuracy(data, preds):
     count = 0
