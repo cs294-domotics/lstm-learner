@@ -1,6 +1,6 @@
 #this is trying to predict a single light
 
-# Heavily borrowed from https://kevinzakka.github.io/2016/07/13/k-nearest-neighbor/
+# Ideas from https://kevinzakka.github.io/2016/07/13/k-nearest-neighbor/
 
 """
 TODO: (1) check if euclidean distance is accurate on trained values using k = 1 and an accuracy function
