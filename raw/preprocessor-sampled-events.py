@@ -15,16 +15,16 @@ from copy import copy, deepcopy
 import datetime
 from time import time
 import random
-
+import os
 
 #filetime = "_one_day_train"
 #filetime = "_one_day_test"
 #filetime = "_one_week_train"
 #filetime = "_one_week_test"
-filetime = "_two_weeks_train"
+#filetime = "_two_weeks_train"
 #filetime = "_two_weeks_test"
 #filetime = "_one_month_train"
-#filetime = "_one_month_test"
+filetime = "_one_month_test"
 filename = "event_data/twor2010" + filetime
 master_file = "../data/twor2010"
 
@@ -35,8 +35,8 @@ desired_label_types = ['L'] #predicting the next light event
 features_save_filename = "features.npy"
 labels_save_filename = "labels.npy"
 
-add_time = True
-add_light_state = True
+add_time = False
+add_light_state = False
 
 if add_time and add_light_state:
     save_folder = "build/events/raw/light_and_time/"
@@ -58,6 +58,7 @@ window_size = 5  # need to find best window size
 
 
 def main():
+    ensure_dir(save_folder) 
     # get data and metadata
     print("loading data...")
     _, input_device_buckets, label_device_buckets, first_timestamps = load_data(master_file)
@@ -103,6 +104,10 @@ def main():
             label_filename = save_folder + str(device) + "_" + str(window_size) + filetime + "_" + labels_save_filename
             save_vectors(input_samples, label_samples, feature_filename, label_filename)
             print("saved samples to " + feature_filename + " and " + label_filename)
+
+def ensure_dir(dir_path):
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
 
 def add_time_of_day(input_vectors, timestamps):
     time_of_day = 0 #night
@@ -160,10 +165,10 @@ def load_data(filename):
     #nearby_devices = ["M001", "M002", "M003", "M004", "M005", "M006", "M007", "M008", "M009", "M010", "M011", "M012", "M013", "M014", "M015", "M016", "M023" "D002", "L004", "L003", "L005"]
     #new_data = []
     #for line in data:
-#        d = get_device(line)
-#        if d in nearby_devices:
-#            new_data.append(line)
-#    data = new_data
+    #    d = get_device(line)
+    #    if d in nearby_devices:
+    #        new_data.append(line)
+    #data = new_data
 
     # get list of all devices in dataset sorted into buckets by type
     device_buckets, first_timestamps = get_devices(data)
